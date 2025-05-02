@@ -68,9 +68,8 @@ class CameraPage extends StatelessWidget {
                 debugPrint('Unknown event: $event');
             }
           },
-          saveConfig: SaveConfig.photoAndVideo(
-            initialCaptureMode: CaptureMode.photo,
-            photoPathBuilder: (sensors) async {
+          saveConfig: SaveConfig.photo(
+            pathBuilder: (sensors) async {
               final Directory extDir = await getTemporaryDirectory();
               final testDir = await Directory(
                 '${extDir.path}/camerawesome',
@@ -89,16 +88,6 @@ class CameraPage extends StatelessWidget {
                 },
               );
             },
-            videoOptions: VideoOptions(
-              enableAudio: true,
-              ios: CupertinoVideoOptions(
-                fps: 10,
-              ),
-              android: AndroidVideoOptions(
-                bitrate: 6000000,
-                fallbackStrategy: QualityFallbackStrategy.lower,
-              ),
-            ),
             exifPreferences: ExifPreferences(saveGPSLocation: true),
           ),
           sensorConfig: SensorConfig.single(
