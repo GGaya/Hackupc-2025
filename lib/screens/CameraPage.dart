@@ -105,11 +105,11 @@ class _CameraPageState extends State<CameraPage> {
           onMediaCaptureEvent: (event) {
             switch ((event.status, event.isPicture, event.isVideo)) {
               case (MediaCaptureStatus.success, true, false):
-
                 event.captureRequest.when(
                   single: (single) {
                     final file = File(single.file!.path);
-                    uploadImage(File(single.file!.path));
+                    uploadImage(file);
+
                     Navigator.push(
                       context,
                       MaterialPageRoute(
