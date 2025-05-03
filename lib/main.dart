@@ -8,4 +8,5 @@ void main() {
     debugShowCheckedModeBanner: false,
     home: CameraPage(),
   ));
+
 }

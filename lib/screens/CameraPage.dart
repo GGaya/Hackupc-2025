@@ -7,7 +7,21 @@ import 'package:image_picker/image_picker.dart';
 import 'package:indi_search/utils/file_utils.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'SearchPage.dart';
 import 'package:http/http.dart' as http;
+import 'dart:io';
+
+class CameraAwesomeApp extends StatelessWidget {
+  const CameraAwesomeApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      title: 'IndiSearch',
+      home: CameraPage(),
+    );
+  }
+}
 
 class CameraPage extends StatefulWidget {
   const CameraPage({super.key});
@@ -85,40 +99,54 @@ class _CameraPageState extends State<CameraPage> {
     }
 
     return Scaffold(
-      body: Stack(
-        children: [
-          CameraAwesomeBuilder.awesome(
-            onMediaCaptureEvent: (event) {
-              switch ((event.status, event.isPicture, event.isVideo)) {
-                case (MediaCaptureStatus.capturing, true, false):
-                  debugPrint('Capturando imagen...');
-                case (MediaCaptureStatus.success, true, false):
-                  event.captureRequest.when(
-                    single: (single) {
-                      uploadImage(File(single.file!.path));
-                      debugPrint('Imagen guardada: ${single.file?.path}');
-                    },
-                    multiple: (multiple) {
-                      multiple.fileBySensor.forEach((key, value) {
-                        debugPrint('Imagen múltiple: $key ${value?.path}');
-                      });
-                    },
-                  );
-                case (MediaCaptureStatus.failure, true, false):
-                  debugPrint('Error al capturar imagen: ${event.exception}');
-                default:
-                  debugPrint('Evento desconocido: $event');
+      body: Container(
+        color: Colors.white,
+        child: CameraAwesomeBuilder.awesome(
+          onMediaCaptureEvent: (event) {
+            switch ((event.status, event.isPicture, event.isVideo)) {
+              case (MediaCaptureStatus.success, true, false):
+                event.captureRequest.when(
+                  single: (single) {
+                    final file = File(single.file!.path);
+                    uploadImage(file);
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SearchPage(imageFile: file),
+                      ),
+                    );
+
+                    debugPrint('Picture saved: ${single.file?.path}');
+                  },
+                  multiple: (multiple) {
+                    multiple.fileBySensor.forEach((key, value) {
+                      debugPrint('multiple image taken: $key ${value?.path}');
+                    });
+                  },
+                );
+
+              case (MediaCaptureStatus.failure, true, false):
+                debugPrint('Failed to capture picture: ${event.exception}');
+              case (MediaCaptureStatus.capturing, false, true):
+                debugPrint('Capturing video...');
+              default:
+                debugPrint('Unknown event: $event');
+            }
+          },
+          saveConfig: SaveConfig.photo(
+            pathBuilder: (sensors) async {
+              final Directory extDir = await getTemporaryDirectory();
+              final testDir = await Directory(
+                '${extDir.path}/camerawesome',
+              ).create(recursive: true);
+              if (sensors.length == 1) {
+                final String filePath =
+                    '${testDir.path}/${DateTime.now().millisecondsSinceEpoch}.jpg';
+                return SingleCaptureRequest(filePath, sensors.first);
               }
-            },
-            saveConfig: SaveConfig.photo(
-              pathBuilder: (sensors) async {
-                final Directory extDir = await getTemporaryDirectory();
-                final testDir = await Directory('${extDir.path}/camerawesome').create(recursive: true);
-                if (sensors.length == 1) {
-                  final String filePath = '${testDir.path}/${DateTime.now().millisecondsSinceEpoch}.jpg';
-                  return SingleCaptureRequest(filePath, sensors.first);
-                }
-                return MultipleCaptureRequest({
+              return MultipleCaptureRequest(
+                {
                   for (final sensor in sensors)
                     sensor: '${testDir.path}/${sensor.position == SensorPosition.front ? 'front_' : "back_"}${DateTime.now().millisecondsSinceEpoch}.jpg',
                 });
