@@ -204,41 +204,44 @@ class _CameraPageState extends State<CameraPage> {
             },
           ),
 
-          // Botón galería
           Positioned(
-            right: 32,
-            bottom: 16,
-            child: GestureDetector(
-              onTap: _openGallery,
-              child: Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  color: Colors.black45,
+            right: 16,
+            top: MediaQuery.of(context).size.height * 0.25,
+            child: Column(
+              children: [
+                // Botón galería
+                GestureDetector(
+                  onTap: _openGallery,
+                  child: Container(
+                    width: 64,
+                    height: 64,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.black45,
+                    ),
+                    child: const Icon(Icons.photo, color: Colors.white, size: 32),
+                  ),
                 ),
-                child: const Icon(Icons.photo, color: Colors.white),
-              ),
+
+                // Botón favoritos
+                GestureDetector(
+                  onTap: _openFavorites,
+                  child: Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.black45,
+                    ),
+                    child: const Icon(Icons.favorite, color: Colors.white, size: 32),
+                  ),
+                ),
+              ],
             ),
           ),
 
-          // Botón favoritos
-          Positioned(
-            right: 264,
-            bottom: 84,
-            child: GestureDetector(
-              onTap: _openFavorites,
-              child: Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  color: Colors.black45,
-                ),
-                child: const Icon(Icons.favorite, color: Colors.white),
-              ),
-            ),
-          ),
+
 
           // Overlay de carga
           if (_isLoading)
