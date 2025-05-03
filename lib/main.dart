@@ -4,5 +4,8 @@ import 'package:flutter/material.dart';
 import 'screens/CameraPage.dart';
 
 void main() {
-  runApp(const CameraAwesomeApp());
+  runApp(const MaterialApp(
+    debugShowCheckedModeBanner: false,
+    home: CameraPage(),
+  ));
 }
