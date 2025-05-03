@@ -1,5 +1,17 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+Future<void> _launchURL(BuildContext context, String url) async {
+  final uri = Uri.parse(url);
+  if (await canLaunchUrl(uri)) {
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('No se pudo abrir la URL')),
+    );
+  }
+}
 
 class SearchPage extends StatefulWidget {
   final File imageFile;
@@ -16,33 +28,43 @@ class _SearchPageState extends State<SearchPage> {
 
   late List<Map<String, dynamic>> items;
 
+
+
   @override
   void initState() {
     super.initState();
 
     items = [
       {
-        'image': widget.imageFile,
+        'shopURL': 'https://www.zara.com/es/en/v-nck-jrsy-14-p03039451.html',
+        'imageURL': 'https://static.zara.net/assets/public/6bb0/b324/99c242d3a68a/cf1a037ca848/T0272791003-p/T0272791003-p.jpg?ts=1744131076418&w=750',
         'name': 'Camiseta blanca',
         'price': '19.99€',
+        'brand': 'Zara',
         'isFavorite': false,
       },
       {
-        'image': widget.imageFile,
+        'shopURL': 'https://www.zara.com/es/en/v-nck-jrsy-14-p03039451.html',
+        'imageURL': 'https://static.zara.net/assets/public/6bb0/b324/99c242d3a68a/cf1a037ca848/T0272791003-p/T0272791003-p.jpg?ts=1744131076418&w=750',
         'name': 'Chaqueta denim',
         'price': '59.99€',
+        'brand': 'Zara',
         'isFavorite': false,
       },
       {
-        'image': widget.imageFile,
+        'shopURL': 'https://www.zara.com/es/en/v-nck-jrsy-14-p03039451.html',
+        'imageURL': 'https://static.zara.net/assets/public/6bb0/b324/99c242d3a68a/cf1a037ca848/T0272791003-p/T0272791003-p.jpg?ts=1744131076418&w=750',
         'name': 'Pantalón beige',
         'price': '39.99€',
+        'brand': 'Zara',
         'isFavorite': false,
       },
       {
-        'image': widget.imageFile,
+        'shopURL': 'https://www.zara.com/es/en/v-nck-jrsy-14-p03039451.html',
+        'imageURL': 'https://static.zara.net/assets/public/6bb0/b324/99c242d3a68a/cf1a037ca848/T0272791003-p/T0272791003-p.jpg?ts=1744131076418&w=750',
         'name': 'Zapatos negros',
         'price': '89.99€',
+        'brand': 'Zara',
         'isFavorite': false,
       },
     ];
@@ -59,7 +81,7 @@ class _SearchPageState extends State<SearchPage> {
             onTap: () => Navigator.pop(context),
             child: Container(
               width: 250,
-              padding: const EdgeInsets.all(16),
+              height: 300,
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
@@ -71,7 +93,26 @@ class _SearchPageState extends State<SearchPage> {
                   ),
                 ],
               ),
-              child: Image.file(widget.imageFile),
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.file(
+                      widget.imageFile,
+                      width: double.infinity,
+                      height: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  const Center(
+                    child: Icon(
+                      Icons.camera_alt_outlined,
+                      size: 60,
+                      color: Colors.white54, // blanco con opacidad
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
 
@@ -103,11 +144,21 @@ class _SearchPageState extends State<SearchPage> {
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
-                            Image.file(
-                              item['image'],
-                              width: 150,
-                              height: 150,
-                              fit: BoxFit.cover,
+                            GestureDetector(
+                              onTap: () => _launchURL(context, item['shopURL']),
+                              child: Image.network(
+                                item['imageURL'],
+                                fit: BoxFit.cover,
+                                width: 150,
+                                height: 150,
+                                loadingBuilder: (context, child, progress) {
+                                  if (progress == null) return child;
+                                  return Center(child: CircularProgressIndicator());
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Icon(Icons.error);
+                                },
+                              ),
                             ),
                             Positioned(
                               top: 8,
@@ -153,6 +204,11 @@ class _SearchPageState extends State<SearchPage> {
           Text(
             items[_currentIndex]['price'],
             style: const TextStyle(fontSize: 16, color: Colors.grey),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            items[_currentIndex]['brand'],
+            style: const TextStyle(fontSize: 16, color: Colors.black),
           ),
         ],
       ),
