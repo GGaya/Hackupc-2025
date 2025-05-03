@@ -69,14 +69,17 @@ class _CameraPageState extends State<CameraPage> {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
+      final file = File(pickedFile.path);
+      uploadImage(file);
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => GalleryPage(imagePath: pickedFile.path),
+          builder: (context) => SearchPage(imageFile: file),
         ),
       );
     }
   }
+
 
   /*void _openFavorites() {
     Navigator.push(
