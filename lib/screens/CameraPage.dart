@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../utils/file_utils.dart';
+import 'SearchPage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:io';
 
@@ -15,7 +16,7 @@ class CameraAwesomeApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const MaterialApp(
-      title: 'camerAwesome',
+      title: 'IndiSearch',
       home: CameraPage(),
     );
   }
@@ -91,12 +92,19 @@ class _CameraPageState extends State<CameraPage> {
         child: CameraAwesomeBuilder.awesome(
           onMediaCaptureEvent: (event) {
             switch ((event.status, event.isPicture, event.isVideo)) {
-              case (MediaCaptureStatus.capturing, true, false):
-                debugPrint('Capturing picture...');
               case (MediaCaptureStatus.success, true, false):
                 event.captureRequest.when(
                   single: (single) {
-                    uploadImage(File(single.file!.path));
+                    final file = File(single.file!.path);
+                    uploadImage(file);
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SearchPage(imageFile: file),
+                      ),
+                    );
+
                     debugPrint('Picture saved: ${single.file?.path}');
                   },
                   multiple: (multiple) {
@@ -105,6 +113,7 @@ class _CameraPageState extends State<CameraPage> {
                     });
                   },
                 );
+
               case (MediaCaptureStatus.failure, true, false):
                 debugPrint('Failed to capture picture: ${event.exception}');
               case (MediaCaptureStatus.capturing, false, true):

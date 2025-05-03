@@ -5,4 +5,5 @@ import 'screens/CameraPage.dart';
 
 void main() {
   runApp(const CameraAwesomeApp());
+
 }
