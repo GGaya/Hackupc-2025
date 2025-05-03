@@ -60,14 +60,14 @@ flutter run
     - `requests`
     - `fastapi`
     - `beautyshop`
-- Credenciales válidas de acceso a la API de Zara ([developer.zara.com](https://developer.zara.com))
+- Credenciales válidas de acceso a la API de Zara ([developer.inditex.com](https://developer.inditex.com))
 
 ### Pasos de instalación
 
 1. **Clonar el repositorio y acceder a la carpeta del backend**
 
    ```bash
-   git clone https://github.com/tuusuario/IndiSearch.git
+   git clone https://github.com/GGaya/IndiSearch.git
 
 #### 2. Instala las dependencias de Python
 ```bash
@@ -80,7 +80,7 @@ Antes de ejecutar el servidor, debes editar el archivo `api.py` para asegurarte 
 
 - **URLs del backend:** modifica las rutas si tu servidor no está en localhost o si has cambiado el dominio.
 - **Credenciales de Zara:**
-    - Usuario (email registrado en [developer.zara.com](https://developer.zara.com))
+    - Usuario (email registrado en [developer.inditex.com](https://developer.inditex.com))
     - Contraseña o token de acceso
 - **Certificados SSL:**
     - Ruta al archivo `privkey.pem`
