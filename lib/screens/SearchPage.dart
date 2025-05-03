@@ -2,12 +2,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-Future<void> _launchURL(String url) async {
+Future<void> _launchURL(BuildContext context, String url) async {
   final uri = Uri.parse(url);
   if (await canLaunchUrl(uri)) {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   } else {
-    throw 'Could not launch $url';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('No se pudo abrir la URL')),
+    );
   }
 }
 
@@ -142,18 +144,21 @@ class _SearchPageState extends State<SearchPage> {
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
-                            Image.network(
-                              item['imageURL'],
-                              fit: BoxFit.cover,
-                              width: 150,
-                              height: 150,
-                              loadingBuilder: (context, child, progress) {
-                                if (progress == null) return child;
-                                return CircularProgressIndicator(); // muestra mientras carga
-                              },
-                              errorBuilder: (context, error, stackTrace) {
-                                return Icon(Icons.error); // muestra si falla
-                              },
+                            GestureDetector(
+                              onTap: () => _launchURL(context, item['shopURL']),
+                              child: Image.network(
+                                item['imageURL'],
+                                fit: BoxFit.cover,
+                                width: 150,
+                                height: 150,
+                                loadingBuilder: (context, child, progress) {
+                                  if (progress == null) return child;
+                                  return Center(child: CircularProgressIndicator());
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Icon(Icons.error);
+                                },
+                              ),
                             ),
                             Positioned(
                               top: 8,
