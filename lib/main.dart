@@ -5,128 +5,128 @@ import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camerawesome/pigeon.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'utils/file_utils.dart';
+import 'package:http/http.dart' as http;
+import 'dart:io';
 
 void main() {
-  runApp(const CameraAwesomeApp());
+  runApp(const MaterialApp(
+    home: CameraPage(),
+  ));
 }
-
-class CameraAwesomeApp extends StatelessWidget {
-  const CameraAwesomeApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      title: 'camerAwesome',
-      home: CameraPage(),
-    );
-  }
-}
-
-class CameraPage extends StatelessWidget {
+class CameraPage extends StatefulWidget {
   const CameraPage({super.key});
 
   @override
+  State<CameraPage> createState() => _CameraPageState();
+}
+
+class _CameraPageState extends State<CameraPage> {
+  bool _hasPermission = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _requestCameraPermission();
+  }
+
+  Future<void> _requestCameraPermission() async {
+    final status = await Permission.camera.request();
+    setState(() {
+      _hasPermission = status.isGranted;
+    });
+  }
+
+  Future<void> uploadImage(File imageFile) async {
+    var uri = Uri.parse('http://4.231.114.132:8000/upload-image/');
+
+    var request = http.MultipartRequest('POST', uri)
+      ..files.add(await http.MultipartFile.fromPath('file', imageFile.path));
+
+    var response = await request.send();
+
+    if (response.statusCode == 200) {
+      print('Imagen enviada con éxito');
+    } else {
+      print('Fallo al enviar la imagen');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (!_hasPermission) {
+      return const Scaffold(
+        body: Center(child: Text('Esperando permiso de cámara...')),
+      );
+    }
+
     return Scaffold(
-      body: Container(
-        color: Colors.white,
-        child: CameraAwesomeBuilder.awesome(
-          onMediaCaptureEvent: (event) {
-            switch ((event.status, event.isPicture, event.isVideo)) {
-              case (MediaCaptureStatus.capturing, true, false):
-                debugPrint('Capturing picture...');
-              case (MediaCaptureStatus.success, true, false):
-                event.captureRequest.when(
-                  single: (single) {
-                    debugPrint('Picture saved: ${single.file?.path}');
-                  },
-                  multiple: (multiple) {
-                    multiple.fileBySensor.forEach((key, value) {
-                      debugPrint('multiple image taken: $key ${value?.path}');
-                    });
-                  },
-                );
-              case (MediaCaptureStatus.failure, true, false):
-                debugPrint('Failed to capture picture: ${event.exception}');
-              case (MediaCaptureStatus.capturing, false, true):
-                debugPrint('Capturing video...');
-              case (MediaCaptureStatus.success, false, true):
-                event.captureRequest.when(
-                  single: (single) {
-                    debugPrint('Video saved: ${single.file?.path}');
-                  },
-                  multiple: (multiple) {
-                    multiple.fileBySensor.forEach((key, value) {
-                      debugPrint('multiple video taken: $key ${value?.path}');
-                    });
-                  },
-                );
-              case (MediaCaptureStatus.failure, false, true):
-                debugPrint('Failed to capture video: ${event.exception}');
-              default:
-                debugPrint('Unknown event: $event');
-            }
-          },
-          saveConfig: SaveConfig.photoAndVideo(
-            initialCaptureMode: CaptureMode.photo,
-            photoPathBuilder: (sensors) async {
-              final Directory extDir = await getTemporaryDirectory();
-              final testDir = await Directory(
-                '${extDir.path}/camerawesome',
-              ).create(recursive: true);
-              if (sensors.length == 1) {
-                final String filePath =
-                    '${testDir.path}/${DateTime.now().millisecondsSinceEpoch}.jpg';
-                return SingleCaptureRequest(filePath, sensors.first);
-              }
-              // Separate pictures taken with front and back camera
-              return MultipleCaptureRequest(
-                {
-                  for (final sensor in sensors)
-                    sensor:
-                    '${testDir.path}/${sensor.position == SensorPosition.front ? 'front_' : "back_"}${DateTime.now().millisecondsSinceEpoch}.jpg',
+      body: CameraAwesomeBuilder.awesome(
+        onMediaCaptureEvent: (event) {
+          switch ((event.status, event.isPicture, event.isVideo)) {
+            case (MediaCaptureStatus.capturing, true, false):
+              debugPrint('Capturando foto...');
+            case (MediaCaptureStatus.success, true, false):
+              event.captureRequest.when(
+                single: (single) {
+                  uploadImage(File(single.file!.path));
+                  debugPrint('Foto guardada: ${single.file?.path}');
+                },
+                multiple: (multiple) {
+                  multiple.fileBySensor.forEach((key, value) {
+                    debugPrint('Foto múltiple: $key ${value?.path}');
+                  });
                 },
               );
-            },
-            videoOptions: VideoOptions(
-              enableAudio: true,
-              ios: CupertinoVideoOptions(
-                fps: 10,
-              ),
-              android: AndroidVideoOptions(
-                bitrate: 6000000,
-                fallbackStrategy: QualityFallbackStrategy.lower,
-              ),
-            ),
-            exifPreferences: ExifPreferences(saveGPSLocation: true),
-          ),
-          sensorConfig: SensorConfig.single(
-            sensor: Sensor.position(SensorPosition.back),
-            flashMode: FlashMode.auto,
-            aspectRatio: CameraAspectRatios.ratio_4_3,
-            zoom: 0.0,
-          ),
-          enablePhysicalButton: true,
-          // filter: AwesomeFilter.AddictiveRed,
-          previewAlignment: Alignment.center,
-          previewFit: CameraPreviewFit.contain,
-          onMediaTap: (mediaCapture) {
-            mediaCapture.captureRequest.when(
-              single: (single) {
-                debugPrint('single: ${single.file?.path}');
-                single.file?.open();
-              },
-              multiple: (multiple) {
-                multiple.fileBySensor.forEach((key, value) {
-                  debugPrint('multiple file taken: $key ${value?.path}');
-                  value?.open();
-                });
-              },
-            );
+            case (MediaCaptureStatus.failure, true, false):
+              debugPrint('Error al capturar foto: ${event.exception}');
+            case (MediaCaptureStatus.capturing, false, true):
+              debugPrint('Grabando video...');
+            case (MediaCaptureStatus.success, false, true):
+              event.captureRequest.when(
+                single: (single) {
+                  debugPrint('Video guardado: ${single.file?.path}');
+                },
+                multiple: (multiple) {
+                  multiple.fileBySensor.forEach((key, value) {
+                    debugPrint('Video múltiple: $key ${value?.path}');
+                  });
+                },
+              );
+            case (MediaCaptureStatus.failure, false, true):
+              debugPrint('Error al grabar video: ${event.exception}');
+            default:
+              debugPrint('Evento desconocido: $event');
+          }
+        },
+        saveConfig: SaveConfig.photoAndVideo(
+          initialCaptureMode: CaptureMode.photo,
+          photoPathBuilder: (sensors) async {
+            final dir = await getTemporaryDirectory();
+            final folder = await Directory('${dir.path}/camerawesome').create(recursive: true);
+            return SingleCaptureRequest('${folder.path}/${DateTime.now().millisecondsSinceEpoch}.jpg', sensors.first);
           },
-          availableFilters: awesomePresetFiltersList,
+          exifPreferences: ExifPreferences(saveGPSLocation: false),
         ),
+        sensorConfig: SensorConfig.single(
+          sensor: Sensor.position(SensorPosition.back),
+          flashMode: FlashMode.auto,
+          aspectRatio: CameraAspectRatios.ratio_4_3,
+          zoom: 0.0,
+        ),
+        enablePhysicalButton: true,
+        previewAlignment: Alignment.center,
+        previewFit: CameraPreviewFit.contain,
+        availableFilters: awesomePresetFiltersList,
+        onMediaTap: (media) {
+          media.captureRequest.when(
+            single: (single) => single.file?.open(),
+            multiple: (multiple) {
+              multiple.fileBySensor.forEach((_, file) => file?.open());
+            },
+          );
+        },
       ),
     );
   }
