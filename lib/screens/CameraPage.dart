@@ -9,7 +9,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'SearchPage.dart';
 import 'package:http/http.dart' as http;
-import 'dart:io';
+import '../utils/Item.dart';
+import 'dart:convert';
 
 class CameraAwesomeApp extends StatelessWidget {
   const CameraAwesomeApp({super.key});
@@ -58,17 +59,39 @@ class _CameraPageState extends State<CameraPage> {
     }
   }
 
-  Future<void> uploadImage(File imageFile) async {
-    var uri = Uri.parse('https://indisearch.study:443/upload-image/');
-    var request = http.MultipartRequest('POST', uri)
-      ..files.add(await http.MultipartFile.fromPath('file', imageFile.path));
-    var response = await request.send();
-    if (response.statusCode == 200) {
-      print('Imagen enviada con éxito');
-    } else {
-      print('Fallo al enviar la imagen');
+  Future<List<Item>> parseResponse(http.StreamedResponse response) async {
+    final body = await response.stream.bytesToString();
+    print(body);
+    final List decoded = jsonDecode(body);
+    return decoded.map((e) => Item.fromJson(e)).toList();
+  }
+
+  Future<List<Item>> uploadImage(File imageFile) async {
+    try {
+      var uri = Uri.parse('https://indisearch.study:8443/upload-image/');
+      var request = http.MultipartRequest('POST', uri)
+        ..files.add(await http.MultipartFile.fromPath('file', imageFile.path));
+
+      var response = await request.send();
+
+      if (response.statusCode == 200) {
+        final items = await parseResponse(response);
+        if (items.isEmpty) {
+          print('No se han encontrado imágenes');
+        } else {
+          print('Imagen enviada con éxito: ${items.length} resultados');
+        }
+        return items;
+      } else {
+        print('Fallo al enviar la imagen: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      print('Error al enviar imagen: $e');
+      return [];
     }
   }
+
 
   void _openGallery() async {
     final picker = ImagePicker();
@@ -106,14 +129,15 @@ class _CameraPageState extends State<CameraPage> {
             switch ((event.status, event.isPicture, event.isVideo)) {
               case (MediaCaptureStatus.success, true, false):
                 event.captureRequest.when(
-                  single: (single) {
+                  single: (single) async {
                     final file = File(single.file!.path);
-                    uploadImage(file);
-
+                    print("hola");
+                    List<Item> items = await uploadImage(file);
+                    List<Item> itemsReviwed = await saveItemsToFile(items);
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => SearchPage(imageFile: file),
+                        builder: (context) => SearchPage(imageFile: file,items: itemsReviwed),
                       ),
                     );
 

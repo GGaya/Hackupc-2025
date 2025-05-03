@@ -2,21 +2,24 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../utils/Item.dart';
+
 Future<void> _launchURL(BuildContext context, String url) async {
   final uri = Uri.parse(url);
   if (await canLaunchUrl(uri)) {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   } else {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('No se pudo abrir la URL')),
+      const SnackBar(content: Text('No se pudo abrir la URL')),
     );
   }
 }
 
 class SearchPage extends StatefulWidget {
   final File imageFile;
+  final List<Item> items;
 
-  const SearchPage({super.key, required this.imageFile});
+  const SearchPage({super.key, required this.imageFile, required this.items});
 
   @override
   State<SearchPage> createState() => _SearchPageState();
@@ -26,77 +29,44 @@ class _SearchPageState extends State<SearchPage> {
   final PageController _pageController = PageController(viewportFraction: 0.6);
   int _currentIndex = 0;
 
-  late List<Map<String, dynamic>> items;
-
-
+  late final List<Item> items;
 
   @override
   void initState() {
     super.initState();
-
-    items = [
-      {
-        'shopURL': 'https://www.zara.com/es/en/v-nck-jrsy-14-p03039451.html',
-        'imageURL': 'https://static.zara.net/assets/public/6bb0/b324/99c242d3a68a/cf1a037ca848/T0272791003-p/T0272791003-p.jpg?ts=1744131076418&w=750',
-        'name': 'Camiseta blanca',
-        'price': '19.99€',
-        'brand': 'Zara',
-        'isFavorite': false,
-      },
-      {
-        'shopURL': 'https://www.zara.com/es/en/v-nck-jrsy-14-p03039451.html',
-        'imageURL': 'https://static.zara.net/assets/public/6bb0/b324/99c242d3a68a/cf1a037ca848/T0272791003-p/T0272791003-p.jpg?ts=1744131076418&w=750',
-        'name': 'Chaqueta denim',
-        'price': '59.99€',
-        'brand': 'Zara',
-        'isFavorite': false,
-      },
-      {
-        'shopURL': 'https://www.zara.com/es/en/v-nck-jrsy-14-p03039451.html',
-        'imageURL': 'https://static.zara.net/assets/public/6bb0/b324/99c242d3a68a/cf1a037ca848/T0272791003-p/T0272791003-p.jpg?ts=1744131076418&w=750',
-        'name': 'Pantalón beige',
-        'price': '39.99€',
-        'brand': 'Zara',
-        'isFavorite': false,
-      },
-      {
-        'shopURL': 'https://www.zara.com/es/en/v-nck-jrsy-14-p03039451.html',
-        'imageURL': 'https://static.zara.net/assets/public/6bb0/b324/99c242d3a68a/cf1a037ca848/T0272791003-p/T0272791003-p.jpg?ts=1744131076418&w=750',
-        'name': 'Zapatos negros',
-        'price': '89.99€',
-        'brand': 'Zara',
-        'isFavorite': false,
-      },
-    ];
+    items = widget.items; // ✅ Usa los que te pasan
   }
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       body: Column(
         children: [
-          const SizedBox(height: 50),
+          SizedBox(height: screenHeight * 0.05),
           GestureDetector(
             onTap: () => Navigator.pop(context),
             child: Container(
-              width: 250,
-              height: 300,
+              width: screenWidth * 0.7,
+              height: screenHeight * 0.35,
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(screenWidth * 0.04),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black12,
-                    blurRadius: 10,
-                    offset: Offset(0, 4),
+                    blurRadius: screenWidth * 0.02,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
               child: Stack(
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(screenWidth * 0.04),
                     child: Image.file(
                       widget.imageFile,
                       width: double.infinity,
@@ -108,7 +78,7 @@ class _SearchPageState extends State<SearchPage> {
                     child: Icon(
                       Icons.camera_alt_outlined,
                       size: 60,
-                      color: Colors.white54, // blanco con opacidad
+                      color: Colors.white54,
                     ),
                   ),
                 ],
@@ -116,12 +86,22 @@ class _SearchPageState extends State<SearchPage> {
             ),
           ),
 
-          const SizedBox(height: 20),
+          SizedBox(height: screenHeight * 0.03),
 
-          // Carrusel
           SizedBox(
-            height: 300,
-            child: PageView.builder(
+            height: screenHeight * 0.35,
+            child: items.isEmpty
+                ? Center(
+              child: Text(
+                'No items found',
+                style: TextStyle(
+                  fontSize: screenWidth * 0.05,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            )
+                : PageView.builder(
               controller: _pageController,
               itemCount: items.length,
               onPageChanged: (index) {
@@ -140,20 +120,18 @@ class _SearchPageState extends State<SearchPage> {
                     return Transform.scale(
                       scale: value,
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(screenWidth * 0.04),
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
                             GestureDetector(
-                              onTap: () => _launchURL(context, item['shopURL']),
+                              onTap: () => _launchURL(context, item.shopURL),
                               child: Image.network(
-                                item['imageURL'],
+                                item.imageURL,
                                 fit: BoxFit.cover,
-                                width: 150,
-                                height: 150,
                                 loadingBuilder: (context, child, progress) {
                                   if (progress == null) return child;
-                                  return Center(child: CircularProgressIndicator());
+                                  return const Center(child: CircularProgressIndicator());
                                 },
                                 errorBuilder: (context, error, stackTrace) {
                                   return const Icon(Icons.error);
@@ -161,24 +139,25 @@ class _SearchPageState extends State<SearchPage> {
                               ),
                             ),
                             Positioned(
-                              top: 8,
-                              right: 8,
-                              child: GestureDetector(
-                                onTap: () {
+                              top: screenHeight * 0.01,
+                              right: screenWidth * 0.02,
+                              child: GestureDetector (
+                                onTap: () async {
                                   setState(() {
-                                    item['isFavorite'] = !item['isFavorite'];
+                                    item.isFavorite = !item.isFavorite;
                                   });
+                                  await updateFavoriteInFile(items);
                                 },
                                 child: Container(
                                   decoration: const BoxDecoration(
                                     shape: BoxShape.circle,
                                     color: Colors.black45,
                                   ),
-                                  padding: const EdgeInsets.all(6),
+                                  padding: EdgeInsets.all(screenWidth * 0.015),
                                   child: Icon(
-                                    item['isFavorite'] ? Icons.favorite : Icons.favorite_border,
-                                    color: item['isFavorite'] ? Colors.red : Colors.white,
-                                    size: 20,
+                                    item.isFavorite ? Icons.favorite : Icons.favorite_border,
+                                    color: item.isFavorite ? Colors.red : Colors.white,
+                                    size: screenWidth * 0.05,
                                   ),
                                 ),
                               ),
@@ -193,23 +172,33 @@ class _SearchPageState extends State<SearchPage> {
             ),
           ),
 
-          const SizedBox(height: 24),
+          SizedBox(height: screenHeight * 0.03),
 
-          // Texto debajo de la imagen seleccionada
-          Text(
-            items[_currentIndex]['name'],
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            items[_currentIndex]['price'],
-            style: const TextStyle(fontSize: 16, color: Colors.grey),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            items[_currentIndex]['brand'],
-            style: const TextStyle(fontSize: 16, color: Colors.black),
-          ),
+          if (items.isNotEmpty) ...[
+            Text(
+              items[_currentIndex].name,
+              style: TextStyle(
+                fontSize: screenWidth * 0.05,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: screenHeight * 0.01),
+            Text(
+              items[_currentIndex].price,
+              style: TextStyle(
+                fontSize: screenWidth * 0.04,
+                color: Colors.grey,
+              ),
+            ),
+            SizedBox(height: screenHeight * 0.01),
+            Text(
+              items[_currentIndex].brand,
+              style: TextStyle(
+                fontSize: screenWidth * 0.04,
+                color: Colors.black,
+              ),
+            ),
+          ]
         ],
       ),
     );
