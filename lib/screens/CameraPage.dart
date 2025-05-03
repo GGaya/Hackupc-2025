@@ -54,7 +54,7 @@ class _CameraPageState extends State<CameraPage> {
   }
 
   Future<void> uploadImage(File imageFile) async {
-    var uri = Uri.parse('https://4.231.114.132:8000/upload-image');
+    var uri = Uri.parse('https://indisearch.study:443/upload-image/');
     var request = http.MultipartRequest('POST', uri)
       ..files.add(await http.MultipartFile.fromPath('file', imageFile.path));
     var response = await request.send();
