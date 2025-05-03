@@ -6,6 +6,7 @@ import 'dart:io';
 Future<List<Item>> saveItemsToFile(List<Item> newItems) async {
   final dir = await getApplicationDocumentsDirectory();
   final file = File('${dir.path}/Data.json');
+  print('${dir.path}/Data.json');
 
   List<Item> existingItems = [];
 
@@ -16,30 +17,35 @@ Future<List<Item>> saveItemsToFile(List<Item> newItems) async {
     existingItems = decoded.map((e) => Item.fromJson(e)).toList();
   }
 
-  // Crear mapa para evitar duplicados (por ejemplo usando shopURL como clave)
+  // Crear mapa de existentes por shopURL
   final Map<String, Item> itemMap = {
     for (final item in existingItems) item.shopURL: item
   };
 
-  // Agregar nuevos, pero solo si no existen ya
-  for (final item in newItems) {
-    if (!itemMap.containsKey(item.shopURL)) {
-      itemMap[item.shopURL] = item;
-    } else {
-      // Si ya existe, usamos el que ya estaba para conservar isFavorite
-      final existing = itemMap[item.shopURL]!;
-      item.isFavorite = existing.isFavorite;
+  // Lista final para guardar todo el archivo actualizado
+  final Set<String> addedShopURLs = {};
+
+  // Añadir nuevos, manteniendo isFavorite si ya existía
+  for (final newItem in newItems) {
+    final existing = itemMap[newItem.shopURL];
+    if (existing != null) {
+      newItem.isFavorite = existing.isFavorite;
     }
+
+    // Aseguramos que se incluye en el mapa (ya sea nuevo o existente actualizado)
+    itemMap[newItem.shopURL] = newItem;
+    addedShopURLs.add(newItem.shopURL);
   }
 
-  final updatedList = itemMap.values.toList();
-
-  // Guardar todo de nuevo
-  final jsonData = updatedList.map((item) => item.toJson()).toList();
+  // Guardar el archivo completo (items antiguos + nuevos)
+  final fullList = itemMap.values.toList();
+  final jsonData = fullList.map((item) => item.toJson()).toList();
   await file.writeAsString(jsonEncode(jsonData), flush: true);
 
-  return updatedList;
+  // Devolver solo los items correspondientes a newItems (con favoritos actualizados si ya existían)
+  return newItems.map((i) => itemMap[i.shopURL]!).toList();
 }
+
 
 
 
@@ -69,6 +75,27 @@ Future<void> updateFavoriteInFile(List<Item> updatedItems) async {
   await file.writeAsString(jsonEncode(jsonData), flush: true);
 }
 
+Future<List<Item>> loadFavoriteItems() async {
+  final dir = await getApplicationDocumentsDirectory();
+  final file = File('${dir.path}/Data.json');
+
+  if (!await file.exists()) {
+    return [];
+  }
+
+  try {
+    final content = await file.readAsString();
+    final List decoded = jsonDecode(content);
+    final List<Item> allItems = decoded.map((e) => Item.fromJson(e)).toList();
+
+    // Filtrar solo los favoritos
+    final favorites = allItems.where((item) => item.isFavorite).toList();
+    return favorites;
+  } catch (e) {
+    print('Error al leer favoritos: $e');
+    return [];
+  }
+}
 
 class Item {
   final String shopURL;
