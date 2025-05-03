@@ -10,6 +10,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'SearchPage.dart';
 import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
+import 'FavouritesPage.dart';
 
 class CameraPage extends StatefulWidget {
   const CameraPage({super.key});
@@ -21,6 +22,12 @@ class CameraPage extends StatefulWidget {
 class _CameraPageState extends State<CameraPage> {
   bool _cameraPermissionGranted = false;
   SensorPosition _sensorPosition = SensorPosition.back;
+  void _openFavorites() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const FavouritesPage()),
+    );
+  }
 
   @override
   void initState() {
@@ -71,12 +78,12 @@ class _CameraPageState extends State<CameraPage> {
     }
   }
 
-  void _openFavorites() {
+  /*void _openFavorites() {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const FavoritesPage()),
     );
-  }
+  }*/
 
   void _toggleCamera() {
     setState(() {
