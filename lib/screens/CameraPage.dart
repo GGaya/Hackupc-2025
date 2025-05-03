@@ -99,9 +99,9 @@ class _CameraPageState extends State<CameraPage> {
     }
 
     return Scaffold(
-      body: Container(
-        color: Colors.white,
-        child: CameraAwesomeBuilder.awesome(
+      body: Stack(
+        children: [
+          CameraAwesomeBuilder.awesome(
           onMediaCaptureEvent: (event) {
             switch ((event.status, event.isPicture, event.isVideo)) {
               case (MediaCaptureStatus.success, true, false):
