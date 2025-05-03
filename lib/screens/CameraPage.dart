@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camerawesome/pigeon.dart';
@@ -6,11 +7,11 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'SearchPage.dart';
 import 'package:http/http.dart' as http;
-import '../utils/Item.dart';
-import 'dart:convert';
 import 'package:open_filex/open_filex.dart';
+
+import '../utils/Item.dart';
+import 'SearchPage.dart';
 import 'FavouritesPage.dart';
 
 class CameraAwesomeApp extends StatelessWidget {
@@ -25,7 +26,6 @@ class CameraAwesomeApp extends StatelessWidget {
   }
 }
 
-
 class CameraPage extends StatefulWidget {
   const CameraPage({super.key});
 
@@ -35,13 +35,8 @@ class CameraPage extends StatefulWidget {
 
 class _CameraPageState extends State<CameraPage> {
   bool _cameraPermissionGranted = false;
+  bool _isLoading = false;
   SensorPosition _sensorPosition = SensorPosition.back;
-  void _openFavorites() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const FavouritesPage()),
-    );
-  }
 
   @override
   void initState() {
@@ -69,7 +64,6 @@ class _CameraPageState extends State<CameraPage> {
 
   Future<List<Item>> parseResponse(http.StreamedResponse response) async {
     final body = await response.stream.bytesToString();
-    print(body);
     final List decoded = jsonDecode(body);
     return decoded.map((e) => Item.fromJson(e)).toList();
   }
@@ -84,11 +78,6 @@ class _CameraPageState extends State<CameraPage> {
 
       if (response.statusCode == 200) {
         final items = await parseResponse(response);
-        if (items.isEmpty) {
-          print('No se han encontrado imágenes');
-        } else {
-          print('Imagen enviada con éxito: ${items.length} resultados');
-        }
         return items;
       } else {
         print('Fallo al enviar la imagen: ${response.statusCode}');
@@ -100,30 +89,32 @@ class _CameraPageState extends State<CameraPage> {
     }
   }
 
-
   void _openGallery() async {
+    if (_isLoading) return;
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
+      setState(() => _isLoading = true);
       final file = File(pickedFile.path);
       List<Item> items = await uploadImage(file);
-      List<Item> itemsReviwed = await saveItemsToFile(items);
+      List<Item> itemsReviewed = await saveItemsToFile(items);
+      setState(() => _isLoading = false);
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => SearchPage(imageFile: file, items: itemsReviwed),
+          builder: (context) => SearchPage(imageFile: file, items: itemsReviewed),
         ),
       );
     }
   }
 
-
-  /*void _openFavorites() {
+  void _openFavorites() {
+    if (_isLoading) return;
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const FavoritesPage()),
+      MaterialPageRoute(builder: (context) => const FavouritesPage()),
     );
-  }*/
+  }
 
   void _toggleCamera() {
     setState(() {
@@ -151,12 +142,14 @@ class _CameraPageState extends State<CameraPage> {
                   event.captureRequest.when(
                     single: (single) async {
                       final file = File(single.file!.path);
-                      print("hola");
-                    List<Item> items = await uploadImage(file);
-                    List<Item> itemsReviwed = await saveItemsToFile(items);                      Navigator.push(
+                      setState(() => _isLoading = true);
+                      List<Item> items = await uploadImage(file);
+                      List<Item> itemsReviewed = await saveItemsToFile(items);
+                      setState(() => _isLoading = false);
+                      Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => SearchPage(imageFile: file,items: itemsReviwed),
+                          builder: (context) => SearchPage(imageFile: file, items: itemsReviewed),
                         ),
                       );
                     },
@@ -166,8 +159,7 @@ class _CameraPageState extends State<CameraPage> {
                       });
                     },
                   );
-                case (MediaCaptureStatus.failure, true, false):
-                  debugPrint('Failed to capture picture: ${event.exception}');
+                  break;
                 default:
                   break;
               }
@@ -211,7 +203,8 @@ class _CameraPageState extends State<CameraPage> {
               );
             },
           ),
-          // Botón galería - ABAJO A LA DERECHA
+
+          // Botón galería
           Positioned(
             right: 32,
             bottom: 16,
@@ -228,9 +221,10 @@ class _CameraPageState extends State<CameraPage> {
               ),
             ),
           ),
-          // Botón favoritos - ARRIBA DEL BOTÓN DE GALERÍA
+
+          // Botón favoritos
           Positioned(
-            right: 264, // 40 | Aquest valor fa que la icona estigui a l'esquerra
+            right: 264,
             bottom: 84,
             child: GestureDetector(
               onTap: _openFavorites,
@@ -245,33 +239,27 @@ class _CameraPageState extends State<CameraPage> {
               ),
             ),
           ),
+
+          // Overlay de carga
+          if (_isLoading)
+            Container(
+              color: Colors.black54,
+              child: const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 12),
+                    Text(
+                      'Searching Results...',
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
-    );
-  }
-}
-
-class GalleryPage extends StatelessWidget {
-  final String imagePath;
-  const GalleryPage({super.key, required this.imagePath});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Galería')),
-      body: Center(child: Image.file(File(imagePath))),
-    );
-  }
-}
-
-class FavoritesPage extends StatelessWidget {
-  const FavoritesPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Favoritos')),
-      body: const Center(child: Text('Aquí irán tus fotos favoritas.')),
     );
   }
 }
