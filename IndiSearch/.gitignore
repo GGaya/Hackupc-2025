@@ -44,7 +44,7 @@ windows/
 
 # Web build
 web/build/
-build/web/
+build/
 
 # Logs, OS files
 *.log
