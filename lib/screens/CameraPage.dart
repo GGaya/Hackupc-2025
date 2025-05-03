@@ -9,19 +9,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'SearchPage.dart';
 import 'package:http/http.dart' as http;
-import 'dart:io';
-
-class CameraAwesomeApp extends StatelessWidget {
-  const CameraAwesomeApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      title: 'IndiSearch',
-      home: CameraPage(),
-    );
-  }
-}
+import 'package:open_filex/open_filex.dart';
+import 'FavouritesPage.dart';
 
 class CameraPage extends StatefulWidget {
   const CameraPage({super.key});
@@ -32,6 +21,13 @@ class CameraPage extends StatefulWidget {
 
 class _CameraPageState extends State<CameraPage> {
   bool _cameraPermissionGranted = false;
+  SensorPosition _sensorPosition = SensorPosition.back;
+  void _openFavorites() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const FavouritesPage()),
+    );
+  }
 
   @override
   void initState() {
@@ -41,7 +37,6 @@ class _CameraPageState extends State<CameraPage> {
 
   Future<void> _checkAndRequestPermission() async {
     final status = await Permission.camera.status;
-
     if (status.isGranted) {
       setState(() {
         _cameraPermissionGranted = true;
@@ -75,20 +70,31 @@ class _CameraPageState extends State<CameraPage> {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
+      final file = File(pickedFile.path);
+      uploadImage(file);
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => GalleryPage(imagePath: pickedFile.path),
+          builder: (context) => SearchPage(imageFile: file),
         ),
       );
     }
   }
 
-  void _openFavorites() {
+
+  /*void _openFavorites() {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const FavoritesPage()),
     );
+  }*/
+
+  void _toggleCamera() {
+    setState(() {
+      _sensorPosition = _sensorPosition == SensorPosition.back
+          ? SensorPosition.front
+          : SensorPosition.back;
+    });
   }
 
   @override
@@ -103,51 +109,41 @@ class _CameraPageState extends State<CameraPage> {
       body: Stack(
         children: [
           CameraAwesomeBuilder.awesome(
-          onMediaCaptureEvent: (event) {
-            switch ((event.status, event.isPicture, event.isVideo)) {
-              case (MediaCaptureStatus.success, true, false):
-                event.captureRequest.when(
-                  single: (single) {
-                    final file = File(single.file!.path);
-                    uploadImage(file);
-
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => SearchPage(imageFile: file),
-                      ),
-                    );
-
-                    debugPrint('Picture saved: ${single.file?.path}');
-                  },
-                  multiple: (multiple) {
-                    multiple.fileBySensor.forEach((key, value) {
-                      debugPrint('multiple image taken: $key ${value?.path}');
-                    });
-                  },
-                );
-
-              case (MediaCaptureStatus.failure, true, false):
-                debugPrint('Failed to capture picture: ${event.exception}');
-              case (MediaCaptureStatus.capturing, false, true):
-                debugPrint('Capturing video...');
-              default:
-                debugPrint('Unknown event: $event');
-            }
-          },
-          saveConfig: SaveConfig.photo(
-            pathBuilder: (sensors) async {
-              final Directory extDir = await getTemporaryDirectory();
-              final testDir = await Directory(
-                '${extDir.path}/camerawesome',
-              ).create(recursive: true);
-              if (sensors.length == 1) {
-                final String filePath =
-                    '${testDir.path}/${DateTime.now().millisecondsSinceEpoch}.jpg';
-                return SingleCaptureRequest(filePath, sensors.first);
+            onMediaCaptureEvent: (event) {
+              switch ((event.status, event.isPicture, event.isVideo)) {
+                case (MediaCaptureStatus.success, true, false):
+                  event.captureRequest.when(
+                    single: (single) {
+                      final file = File(single.file!.path);
+                      uploadImage(file);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => SearchPage(imageFile: file),
+                        ),
+                      );
+                    },
+                    multiple: (multiple) {
+                      multiple.fileBySensor.forEach((key, value) {
+                        debugPrint('multiple image taken: $key ${value?.path}');
+                      });
+                    },
+                  );
+                case (MediaCaptureStatus.failure, true, false):
+                  debugPrint('Failed to capture picture: ${event.exception}');
+                default:
+                  break;
               }
-              return MultipleCaptureRequest(
-                {
+            },
+            saveConfig: SaveConfig.photo(
+              pathBuilder: (sensors) async {
+                final Directory extDir = await getTemporaryDirectory();
+                final testDir = await Directory('${extDir.path}/camerawesome').create(recursive: true);
+                if (sensors.length == 1) {
+                  final String filePath = '${testDir.path}/${DateTime.now().millisecondsSinceEpoch}.jpg';
+                  return SingleCaptureRequest(filePath, sensors.first);
+                }
+                return MultipleCaptureRequest({
                   for (final sensor in sensors)
                     sensor: '${testDir.path}/${sensor.position == SensorPosition.front ? 'front_' : "back_"}${DateTime.now().millisecondsSinceEpoch}.jpg',
                 });
@@ -155,7 +151,7 @@ class _CameraPageState extends State<CameraPage> {
               exifPreferences: ExifPreferences(saveGPSLocation: false),
             ),
             sensorConfig: SensorConfig.single(
-              sensor: Sensor.position(SensorPosition.back),
+              sensor: Sensor.position(_sensorPosition),
               flashMode: FlashMode.auto,
               aspectRatio: CameraAspectRatios.ratio_4_3,
               zoom: 0.0,
@@ -166,21 +162,22 @@ class _CameraPageState extends State<CameraPage> {
             onMediaTap: (mediaCapture) {
               mediaCapture.captureRequest.when(
                 single: (single) {
-                  debugPrint('Tocaste imagen: ${single.file?.path}');
-                  single.file?.open();
+                  if (single.file != null) {
+                    OpenFilex.open(single.file!.path);
+                  }
                 },
                 multiple: (multiple) {
                   multiple.fileBySensor.forEach((key, value) {
-                    debugPrint('Imagen múltiple tocada: $key ${value?.path}');
-                    value?.open();
+                    if (value != null) OpenFilex.open(value.path);
                   });
                 },
               );
             },
           ),
+          // Botón galería - ABAJO A LA DERECHA
           Positioned(
-            left: 16,
-            bottom: 32,
+            right: 32,
+            bottom: 16,
             child: GestureDetector(
               onTap: _openGallery,
               child: Container(
@@ -194,14 +191,15 @@ class _CameraPageState extends State<CameraPage> {
               ),
             ),
           ),
+          // Botón favoritos - ARRIBA DEL BOTÓN DE GALERÍA
           Positioned(
-            right: 16,
-            bottom: 32,
+            right: 264, // 40 | Aquest valor fa que la icona estigui a l'esquerra
+            bottom: 84,
             child: GestureDetector(
               onTap: _openFavorites,
               child: Container(
-                width: 64,
-                height: 64,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   color: Colors.black45,
@@ -224,9 +222,7 @@ class GalleryPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Galería')),
-      body: Center(
-        child: Image.file(File(imagePath)),
-      ),
+      body: Center(child: Image.file(File(imagePath))),
     );
   }
 }
